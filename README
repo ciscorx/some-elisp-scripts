@@ -1,0 +1,1 @@
+word2006-sort-paragraphs.el : Sorts paragraphs of the opened document.xml file of an unzipped or explored .docx MS Word 2006 document.  A paragraph is defined as a group of adjacent lines delimited by a blank line. Requires nxml-mode

@@ -6,11 +6,7 @@ recursed subdirectories, in addition to all the directories
 contained in load-path, as locations where point-to-register can
 point.  All register types except frame, window, and bookmarks
 are restored: point marker, number, rectangle, file-names and
-text, but text properties are not preserved, and kmacros,
-although the kmacro key binding are switched from C-x C-r
-REGISTER to C-x C-k REGISTER.  In addition, the kmacros become
-listed in the minibuffer and the *Messages* buffer when the
-list-registers function is called."
+text, but text properties are not preserved, and kmacros."
   (interactive "P")
   (let (reg  (i 0) func_name original_buffer tmp_buffer tmpbuffer jmp_buffer  saved_point saved_obj jump_pos filename numval load-path-alt str str_pos_start str_pos_end sexp_pos_start sexp_pos_end)
     
@@ -80,18 +76,21 @@ list-registers function is called."
 	  )
 
 	
-	;; load single text line stored as kmacro register
+	;; load  kmacros
 	(goto-char (point-min))
-	(while (re-search-forward "(\\([[:digit:]]+\\) \\. \\[registerv \"" nil t)
-	  (setq reg (string-to-number (match-string-no-properties 1)))
-	  (setq str_pos_start (match-end 0))
-	  (save-excursion 
-	    (backward-char)
-	    (forward-sexp)
-	    (setq str_pos_end (1- (point)))
-	    (copy-to-register reg str_pos_start str_pos_end)
+	(while (re-search-forward "(\\([[:digit:]]+\\) \\. \\[registerv " nil t)
+	  (when (not (looking-at-p "\\[\\["))    ;; but, skip frame configuration entries
+	    
+	    (setq reg (string-to-number (match-string-no-properties 1)))
+	    (save-excursion 
+	      (backward-char 11)
+	      (setq str_pos_start (point))
+	      (forward-sexp)
+	      (setq str_pos_end  (point))
+	      (set-register reg (read (buffer-substring-no-properties str_pos_start str_pos_end)))
+	      )
 	    )
-	  )
+	)
 	
 	;; load rectangles
 	(goto-char (point-min))
@@ -130,31 +129,6 @@ list-registers function is called."
 	  (goto-char sexp_pos_end) 
 	)
 	      
-	;; load kbd-macros: Unfortunately, I couldnt figure out an easy way to load them into registers, so instead resorted to creating functions for them and enabling them through global set key C-x C-k reg, instead of C-x C-r reg.  And, as such, unfortunately, they dont show up on list-registers
-	(goto-char (point-min))
-	(while (re-search-forward "(\\([[:digit:]]+\\) \\. \\[registerv \\[" nil t)
-	  (setq reg (string-to-number (match-string-no-properties 1)))
-	  (setq str_pos_start (match-end 0))
-	  (when (not (looking-at-p "\\["))  ;; skip frameset configuration entries
-	    (save-excursion
-	      (backward-char)
-	      (setq saved-point (point))
-	      (forward-sexp)
-	      (setq str_pos_end  (point))
-	      (setq str (buffer-substring-no-properties saved-point str_pos_end))
-	      (setq func_name (format "setq-from-jmp-registers%s" (number-to-string reg)))
-	      (setq str (format "(fset '%s %s )" func_name str))
-	      (setq saved_obj (read str))
-	      (eval saved_obj)
-	      (setq str (format "(global-set-key (kbd \"C-x C-k %c\") '%s)" reg func_name))
-	      (setq saved_obj (read str))
-	      (eval saved_obj)
-	      
-	      
-	      (setq i (1+ i))
-	      )
-	    )
-	  )
 
 	
 	(kill-buffer jmp_buffer)
@@ -171,39 +145,12 @@ list-registers function is called."
   (find-file "~/.emacs.d/my-jmp-registers.el")
   )
 
-(defun ciscorx/list-jmp-register-kmacros ()
-  "In addition, this function is automatically called after the
-list-registers function is called, to list the kmacros, that were
-loaded from ciscorx/load-jmp-registers-from-file, in the
-minibuffer and the *Messages* buffer"
-  (interactive)
-  
-  (let* (testf testfn lines (i 0) (func_name_prefix "setq-from-jmp-registers") (func_name_width (string-width func_name_prefix))) 
-    (setq testf (loop for x being the symbols
-      if (and (symbol-function x) (> (string-width (symbol-name x)) func_name_width) (string= (substring (symbol-name x) 0 func_name_width) func_name_prefix))
-      collect (symbol-name x)))
-    
-    (setq testfn (loop for x being the symbols
-      if (and (symbol-function x) (> (string-width (symbol-name x)) func_name_width) (string= (substring (symbol-name x) 0 func_name_width) func_name_prefix))
-      collect (symbol-function x)))
-    
-    (while (< i (length testf))
-      (setq lines  (concat lines  (format "C-x C-k %c = %s" (string-to-number (substring (nth i testf) func_name_width)) (key-description (read (prin1-to-string (nth i testfn))) )) "\n"))
-      
-      (setq i (1+ i))
-      )
-    (message lines)
-    )
-  )
-(add-function :after (symbol-function 'list-registers) #'ciscorx/list-jmp-register-kmacros)
-
 
 (defun ciscorx/write-jmp-registers-to-file ()
   "In addition to writing the register file, an incremental diff is saved via 7z-revisions.el if its installed."
   (interactive)
   (with-temp-buffer
     (prin1 register-alist (current-buffer))
-    (ciscorx/write-jmp-registers-to-file_append_kmacros)
     (write-file "~/.emacs.d/my-jmp-registers.el"))
   
   (when (boundp '7z-revisions-mode)
@@ -214,35 +161,6 @@ minibuffer and the *Messages* buffer"
     (kill-buffer)
     )
   )
-
-(defun ciscorx/write-jmp-registers-to-file_append_kmacros ()
-  "Inserts any kmacros that were loaded via ciscorx/load-jmp-registers back into the ~/.emacs.d/my-jmp-registers.el file.  This function must only be called from ciscorx/write-jmp-registers-to-file."
-  
-  (when (looking-back ")")
-    (backward-delete-char-untabify 1))
-    
-  (let* (testf testfn (i 0) (func_name_prefix "setq-from-jmp-registers") (func_name_width (string-width func_name_prefix))) 
-    (setq testf (loop for x being the symbols
-      if (and (symbol-function x) (> (string-width (symbol-name x)) func_name_width) (string= (substring (symbol-name x) 0 func_name_width) func_name_prefix))
-      collect (symbol-name x)))
-    
-    (setq testfn (loop for x being the symbols
-      if (and (symbol-function x) (> (string-width (symbol-name x)) func_name_width) (string= (substring (symbol-name x) 0 func_name_width) func_name_prefix))
-      collect (symbol-function x)))
-    
-    (while (< i (length testf))
-      (insert (concat "( " (substring (nth i testf) func_name_width )) " . [registerv " (prin1-to-string (nth i testfn)) " ])" )
-      (newline)
-      (setq i (1+ i))
-      )
-    )
-  (insert ")")
-  )
-
-
-
-
-  
 
 
 (defun ciscorx/directory-dirs-recursive ( dir maxdepth )

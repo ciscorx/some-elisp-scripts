@@ -16,7 +16,7 @@ text, but text properties are not preserved, and kmacros."
 	(if (and
 	     (boundp 'incl-buffers-dirs)
 	     incl-buffers-dirs)
-	    (setq load-path-alt (append (ciscorx/directory-dirs-recursive "." 3) load-path))  ;; maxdepth 3
+	    (setq load-path-alt (append (ciscorx/directory-dirs-recursive "." 4) load-path))  ;; maxdepth 4
 	  (setq load-path-alt load-path)
 	  )
 	
@@ -79,8 +79,10 @@ text, but text properties are not preserved, and kmacros."
 	;; load  kmacros
 	(goto-char (point-min))
 	(while (re-search-forward "(\\([[:digit:]]+\\) \\. \\[registerv " nil t)
-	  (when (not (looking-at-p "\\[\\["))    ;; but, skip frame configuration entries
-	    
+	  (when (and
+		 (not (looking-at-p "\\[\\["))    ;; but, skip frame configuration entries
+		 (not (looking-at-p "\\[#<buffer"))  ;; and skip undo state data
+		 )
 	    (setq reg (string-to-number (match-string-no-properties 1)))
 	    (save-excursion 
 	      (backward-char 11)

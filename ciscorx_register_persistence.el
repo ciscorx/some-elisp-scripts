@@ -8,7 +8,7 @@ point.  All register types except frame, window, and bookmarks
 are restored: point marker, number, rectangle, file-names and
 text, but text properties are not preserved, and kmacros."
   (interactive "P")
-  (let (reg  (i 0) func_name original_buffer tmp_buffer tmpbuffer jmp_buffer  saved_point saved_obj jump_pos filename numval load-path-alt str str_pos_start str_pos_end sexp_pos_start sexp_pos_end)
+  (let (reg  (i 0) func_name original_buffer tmp_buffer tmpbuffer jmp_buffer  saved_point saved_obj jump_pos filename numval load-path-alt dir str str_pos_start str_pos_end sexp_pos_start sexp_pos_end)
     
     (save-excursion
       (save-window-excursion
@@ -25,14 +25,15 @@ text, but text properties are not preserved, and kmacros."
 
 	;; load point markers
 	(goto-char (point-min))
-	(while (re-search-forward "(\\([[:digit:]]+\\) \\. #<marker at \\([[:digit:]]+\\) in \\([a-zA-Z0-9\-\.]+\\)>)" nil t)
+	(while (re-search-forward "(\\([[:digit:]]+\\) \\. #<marker at \\([[:digit:]]+\\) in \\([a-zA-Z0-9\-\.]+\\)<?\\([a-zA-Z0-9\-\.]*\\)>?>)" nil t)
 	  (setq reg (string-to-number (match-string-no-properties 1))
 		jump_pos (string-to-number (match-string-no-properties 2 ))
-		filename (match-string-no-properties 3 ))
+		filename (match-string-no-properties 3 )
+		dir      (match-string-no-properties 4 ))
 	  
 	  (save-excursion
 	    (save-window-excursion
-	      (find-file (ciscorx/locate-file-among-load-path-dirs filename load-path-alt))
+	      (find-file (ciscorx/locate-file-among-load-path-dirs filename load-path-alt dir))
 	      (goto-char jump_pos)
 	      (point-to-register reg)
 	      )
@@ -195,23 +196,59 @@ subdirectory recursion."
     )
   )
 
-(defun ciscorx/locate-file-among-load-path-dirs ( filename &optional load-path-alt)
-  (let ( (file_fullpath nil) tmpfilename load-path-to-use)
+
+(defun ciscorx/last-subdir-in-path (directory-path)
+  "Return the leaf sub-directory name in dir"
+  (let (len (subdirs (split-string directory-path "/")))
+    (setq len (length subdirs))
+    (if (string= (nth (1- len) subdirs) "")
+	 (nth (- len 2) subdirs)
+      (nth (1- len) subdirs)
+      )
+    )
+  )
+
+
+(defun ciscorx/locate-file-among-load-path-dirs ( filename &optional load-path-alt in-subdir)
+  "Go through all the directories in load-path and see if any of them contain the file filename.  If the load-path-alt argument is given, then include the directory of load-path-alt along with load-path, for where to search.  If in-subdir argument is present, then the filename must be in the specific directory leaf specified by in-subdir.  in-subdir must not be a full-directory-path.  It must only be one leaf, without any parents." 
+  (let ( (file_fullpath nil) tmpfilename load-path-to-use found)
     (if (and
 	 (boundp 'load-path-alt)
 	 load-path-alt)
 	(setq load-path-to-use load-path-alt)
       (setq load-path-to-use load-path)
       )
-	
-    (mapc
-     #'(lambda (x)
-	 (setq tmpfilename (concat x "/" filename))
-	 (when (file-exists-p tmpfilename)
-	   (setq file_fullpath tmpfilename))
-	 )
-     load-path-to-use)
+    (if (and
+	 in-subdir
+	 (not (string= in-subdir "")))
+	(mapc
+	 #'(lambda (x)
+	     (setq tmpfilename (concat x "/" filename))
+	     (when (and
+		    (file-exists-p tmpfilename)
+		    (string= (ciscorx/last-subdir-in-path x) in-subdir)
+		    (not found)
+		    ) 
+	       (setq file_fullpath tmpfilename)
+	       (setq found t)
+	       ) 
+	     )
+	 load-path-to-use)
+					; else
+      (mapc
+       #'(lambda (x)
+	   (setq tmpfilename (concat x "/" filename))
+	   (when (and
+		  (not found)
+		  (file-exists-p tmpfilename))
+	     (setq file_fullpath tmpfilename)
+	     (setq found t)
+	     )
+	   )
+       load-path-to-use)
+    )
     file_fullpath
     )
   )
+
 

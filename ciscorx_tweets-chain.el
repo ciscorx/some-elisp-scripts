@@ -1,4 +1,4 @@
-;; tweets-chain.el            -*- lexical-binding: t; -*-          
+;; ciscorx_tweets-chain.el            -*- lexical-binding: t; -*-          
 (defun ciscorx/split-string-on-word-boundaries-every (string chars)
   "Split STRING into substrings of length CHARS characters, while trying not to split up any words.
 But, if it reaches a line that cannot be split up, without breaking up a word, it just accepts the line of CHARS characters as a whole.

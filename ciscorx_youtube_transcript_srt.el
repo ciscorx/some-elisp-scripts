@@ -5,8 +5,7 @@
   (let (tmppos yttimestamp cntr nxt_hour nxt_min nxt_sec cur_hour cur_min cur_sec)
     (beginning-of-buffer)
   ;; delete all text in buffer except the actual transcript part
-    (re-search-forward "^Transcript")
-    (forward-line 2)
+    (re-search-forward "^Search in video")
     (setq tmppos (line-end-position))
     (delete-region 1 tmppos)
     (forward-line)

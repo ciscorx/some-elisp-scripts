@@ -1,19 +1,33 @@
 
 (defun ciscorx/youtube_transcript->srt ()
-  "Convert current buffer from youtube transcript to srt"
+  "Converts current buffer from youtube transcript to srt format, a text format for subtitles.  In order to obtain a youtube transcript it is necessary to first navagate with a browser to a youtube video and then click the 3 dots '...' to the right of the Dislike, Share and Download options, which will pop up a menu containing a button labeled 'Show transcription'.  It is necessary to click that button and then cut and paste the entire page, using control-a control-c, into an emacs buffer before running the ciscorx/youtube_transcript->srt function from within that buffer."
   (interactive)
   (let (tmppos yttimestamp cntr nxt_hour nxt_min nxt_sec cur_hour cur_min cur_sec)
     (beginning-of-buffer)
-  ;; delete all text in buffer except the actual transcript part
-    (re-search-forward "^Search in video")
-    (setq tmppos (line-end-position))
-    (delete-region 1 tmppos)
-    (forward-line)
-    (backward-delete-char-untabify 1)
-    (forward-paragraph)
-    (delete-region (point) (point-max))
-    (goto-char (point-min))
 
+    ;; delete all text in buffer except the actual transcript part
+    (if (re-search-forward "^Search in video" nil t)
+	(progn
+	  (setq tmppos (line-end-position))
+	  (delete-region 1 tmppos)
+	  (forward-line)
+	  (backward-delete-char-untabify 1)
+	  (forward-paragraph)
+	  (delete-region (point) (point-max))
+	  (goto-char (point-min))
+	  )
+      (re-search-forward "^Transcript")
+      (forward-line)
+      (setq tmppos (line-end-position))
+      (delete-region 1 tmppos)
+      (forward-line)
+      (backward-delete-char-untabify 1)
+      (forward-paragraph)
+      (delete-region (point) (point-max))
+      (goto-char (point-min))
+      (kill-line)
+      )
+    
   ;; traverse each line of transcript, updating the timestamps to srt format
     (setq cntr 1)
     (setq nxt_hour 0)

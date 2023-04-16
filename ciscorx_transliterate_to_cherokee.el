@@ -1,4 +1,15 @@
-; ciscorx_transliterate_to_cherokee.el            -*- lexical-binding: t; -*-          
+; ciscorx_transliterate_to_cherokee.el            -*- lexical-binding: t; -*-
+
+;; This function transliterates a given text in a buffer into Cherokee
+;; script.  The text must be selected (a region) before calling this
+;; function.  After transliteration, the Cherokee text is inserted
+;; after the selected region.  Hyphenated syllabyles are allowed but
+;; not required; for example, `didelo-qua-s-gi' would produce the same
+;; output as `di-de-lo-qua-s-gi', but not `d-i-de-lo-qua-s-gi', as the
+;; hyphen must be used to delimit a syllabyl if used at all.  The char
+;; "■" is used internally as a placeholder and must not appear
+;; anywhere in the input region!
+
 (defun ciscorx/transliterate_to_cherokee (begin end)
   "encode region to cherokee, outputing cherokee text after region"
   (interactive "r")
@@ -6,7 +17,8 @@
 	 output to_syllabary words words_quantity word_idx
 	 word_out char_idx wordparts_idx wordparts wordparts_qty
 	 wordpart_out done_with_word ch ch2 ch3 syl)
-
+    
+;; Define the transliteration table to convert characters to Cherokee script.
     (setq to_syllabary '(("a" . "Ꭰ") ("e" . "Ꭱ") ("i" . "Ꭲ") ("o" . "Ꭳ") ("u" . "Ꭴ") ("v" . "Ꭵ")
 			 ("g" .  (("a" . "Ꭶ" ) ("e" . "Ꭸ") ("i" . "Ꭹ") ("o" . "Ꭺ") ("u" . "Ꭻ") ("v" . "Ꭼ")))
 			 ("k" .  (("a" . "Ꭷ")))
@@ -70,7 +82,7 @@
 					; else
 	      (if (null syl)  ; which will be the nil symbol
 		  (progn
-		    (setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch to_syllabary))))))  ; "■" means default
+		    (setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch to_syllabary))))))  ; "■" is an internal placeholder and must not appear in the input
 		    (setq idx (+ 1 idx))
 		    (if (equal idx wordpart_length)
 			(setq done_with_wordpart t))
@@ -91,7 +103,7 @@
 					; else
 		  (if (null syl)  ; which will be the nil symbol
 		      (progn
-			(setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch2 (cdr (assoc ch to_syllabary))))))))  ; "■" means default
+			(setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch2 (cdr (assoc ch to_syllabary))))))))  ; "■" is an internal placeholder and must not appear in the input
 			(setq idx (+ 2 idx))
 			)
 		    )

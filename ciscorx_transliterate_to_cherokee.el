@@ -82,13 +82,13 @@
 					; else
 	      (if (null syl)  ; which will be the nil symbol
 		  (progn
-		    (setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch to_syllabary))))))  ; "■" is an internal placeholder and must not appear in the input
+		    (setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch to_syllabary))))))  ; "■" is an internal placeholder and must not appear in the input, in this case representing "s"
 		    (setq idx (+ 1 idx))
 		    (if (equal idx wordpart_length)
 			(setq done_with_wordpart t))
 		    )
 					; else
-		(setq ch3 (if (and (< (+ 2 idx) (length wordpart)) (< (+ 3 idx) (length wordpart)))
+		(setq ch3 (if (< (+ 2 idx) (length wordpart))
 			      (substring wordpart (+ 2 idx) (+ 3 idx))
 			    ""))
 		(setq syl (cdr (assoc ch3 syl)))
@@ -103,8 +103,9 @@
 					; else
 		  (if (null syl)  ; which will be the nil symbol
 		      (progn
-			(setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch2 (cdr (assoc ch to_syllabary))))))))  ; "■" is an internal placeholder and must not appear in the input
+			(setq wordpart_out (concat wordpart_out (cdr (assoc "■" (cdr (assoc ch2 (cdr (assoc ch to_syllabary))))))))  ; "■" is an internal placeholder and must not appear in the input, in this case representing "na"
 			(setq idx (+ 2 idx))
+			(setq done_with_wordpart t)
 			)
 		    )
 		  )
